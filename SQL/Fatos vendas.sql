@@ -1,6 +1,7 @@
 USE [AdventureWorks2022]
 GO
 
+/*
 -- Cabeçalho e itens
 SELECT	SalesOrderHeader.SalesOrderID NumeroPedido
 		,SalesOrderHeader.OrderDate "Data criação"
@@ -49,3 +50,20 @@ SELECT	SalesOrderHeader.SalesOrderID NumeroPedido
   LEFT JOIN Person.Address       ON SalesOrderHeader.BillToAddressID = Address.AddressID
   LEFT JOIN Person.StateProvince ON Address.StateProvinceID = StateProvince.StateProvinceID
   LEFT JOIN Person.CountryRegion ON StateProvince.CountryRegionCode = CountryRegion.CountryRegionCode 
+  */
+
+SELECT ProductID "CodigoProduto", 
+CAST(StartDate AS DATE) "DataInicio", 
+CAST(CASE WHEN EndDate IS NULL THEN CAST(GETDATE() AS DATE) ELSE EndDate END AS DATE) "DataFim", StandardCost "Custo padrão" 
+FROM Production.ProductCostHistory
+UNION ALL
+SELECT Product.ProductId, 
+       CAST(CASE WHEN Custo.EndDate IS NULL THEN Product.SellStartDate ELSE Custo.EndDate END AS date) AS DataInicio,
+	   CAST(GETDATE() AS DATE) AS DataFim,
+	   Product.StandardCost
+FROM Production.Product 
+LEFT JOIN (SELECT ProductId, MAX(EndDate) AS EndDate
+           FROM Production.ProductCostHistory
+		   GROUP BY ProductId) AS Custo ON Product.ProductID = Custo.ProductId
+WHERE NOT EXISTS (SELECT 1 FROM Production.ProductCostHistory WHERE Product.ProductID = ProductCostHistory.ProductID AND ProductCostHistory.EndDate IS NULL)
+AND Product.StandardCost  > 0 
