@@ -2,11 +2,11 @@ USE [AdventureWorks2022]
 GO
 
 /*
--- Cabeçalho e itens
+-- Cabeçalho e itens dos pedidos
 SELECT	SalesOrderHeader.SalesOrderID NumeroPedido
-		,SalesOrderHeader.OrderDate "Data criação"
-		,SalesOrderHeader.DueDate "Prazo de entrega"
-		,SalesOrderHeader.ShipDate "Data de envio"
+		,DATEADD(year, 10, SalesOrderHeader.OrderDate) "Data criação"
+		,DATEADD(year, 10, SalesOrderHeader.DueDate) "Prazo de entrega"
+		,DATEADD(year, 10, SalesOrderHeader.ShipDate) "Data de envio"
 		,SalesOrderHeader.Status CodigoStatus
 		,SalesOrderHeader.CustomerID CodigoCliente
 		,SalesOrderHeader.SalesPersonID CodigoVendedor
@@ -52,13 +52,18 @@ SELECT	SalesOrderHeader.SalesOrderID NumeroPedido
   LEFT JOIN Person.CountryRegion ON StateProvince.CountryRegionCode = CountryRegion.CountryRegionCode 
   */
 
+/*
+-- Custo padrao do produto
 SELECT ProductID "CodigoProduto", 
-CAST(StartDate AS DATE) "DataInicio", 
-CAST(CASE WHEN EndDate IS NULL THEN CAST(GETDATE() AS DATE) ELSE EndDate END AS DATE) "DataFim", StandardCost "Custo padrão" 
+       DATEADD(year, 10, CAST(StartDate AS DATE)) "DataInicio", 
+       CAST(CASE WHEN EndDate IS NULL THEN CAST(GETDATE() AS DATE) 
+	             ELSE DATEADD(year, 10, EndDate) END AS DATE) "DataFim", 
+	   StandardCost "Custo padrão" 
 FROM Production.ProductCostHistory
 UNION ALL
 SELECT Product.ProductId, 
-       CAST(CASE WHEN Custo.EndDate IS NULL THEN Product.SellStartDate ELSE Custo.EndDate END AS date) AS DataInicio,
+       CAST(CASE WHEN Custo.EndDate IS NULL THEN DATEADD(year, 10, Product.SellStartDate)
+	             ELSE DATEADD(year, 10, Custo.EndDate) END AS date) AS DataInicio,
 	   CAST(GETDATE() AS DATE) AS DataFim,
 	   Product.StandardCost
 FROM Production.Product 
@@ -67,3 +72,14 @@ LEFT JOIN (SELECT ProductId, MAX(EndDate) AS EndDate
 		   GROUP BY ProductId) AS Custo ON Product.ProductID = Custo.ProductId
 WHERE NOT EXISTS (SELECT 1 FROM Production.ProductCostHistory WHERE Product.ProductID = ProductCostHistory.ProductID AND ProductCostHistory.EndDate IS NULL)
 AND Product.StandardCost  > 0 
+*/
+
+-- Metas de venda
+
+SELECT SalesPerson.BusinessEntityID CodigoVendedor,
+       SalesPerson.TerritoryID CodigoRegiaoVendas,
+	   X.DataMeta, 
+       SalesPerson.SalesQuota "Valor meta de venda"
+  FROM Sales.SalesPerson
+  JOIN (SELECT DISTINCT  DATEADD(year, 10, EOMONTH(OrderDate, 0)) DataMeta FROM Sales.SalesOrderHeader) AS X ON 1 = 1
+ WHERE SalesPerson.SalesQuota IS NOT NULL
