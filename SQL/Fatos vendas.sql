@@ -1,6 +1,7 @@
 USE [AdventureWorks2022]
 GO
 
+
 /*
 -- Cabeçalho e itens dos pedidos
 SELECT	SalesOrderHeader.SalesOrderID NumeroPedido
